@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - fix-snip-private
   pull_request:
     branches:
       - master
@@ -25,10 +26,6 @@ jobs:
             runner: windows-latest
             triplet: x64-windows-static
             vcvars_arch: amd64
-          - arch: arm64
-            runner: windows-11-arm
-            triplet: arm64-windows-static
-            vcvars_arch: arm64
 
     concurrency:
       group: windows-ci-${{ matrix.arch }}-${{ github.ref }}
@@ -103,7 +100,7 @@ jobs:
             ${{ runner.os }}-${{ runner.arch }}-vcpkg-${{ matrix.triplet }}-
 
       - name: Build Release
-        run: .\scripts\build_windows.ps1 -BuildType Release -Triplet $env:CLIPP_RELEASE_TRIPLET -VcVarsArch ${{ matrix.vcvars_arch }} -DisableCodeSigning
+        run: .\scripts\build_windows.ps1 -BuildType Release -Triplet $env:CLIPP_RELEASE_TRIPLET -VcVarsArch ${{ matrix.vcvars_arch }} -DisableCodeSigning -SkipUiAccessStamp -Version 1.5.0.160
 
       - name: Save vcpkg binary cache
         uses: actions/cache/save@v5
@@ -121,6 +118,15 @@ jobs:
           if (-not (Test-Path $shim)) {
             throw "Missing expected console shim: $shim"
           }
+
+      - name: Upload clipp.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: clipp-windows-${{ matrix.arch }}
+          path: |
+            build/windows-release/*.exe
+            build/windows-release/*.com
+          if-no-files-found: error
 
       - name: Verify static dependency closure
         run: |
